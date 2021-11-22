@@ -4,7 +4,9 @@ body {
   color: #222;
   background-color: #fff;
   text-align: center;
+  justify-items: center;
   line-height: 1.4em;
+  display: grid;
 }
 
 main {
@@ -43,4 +45,17 @@ input {
 input[type='text'] {
   width: 220px;
   text-align: center;
+}
+section {
+  height: 100%;
+  display: flex;
+  flex-flow: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  width: 700px;
+}
+table {
+  border-spacing: 30px;
+
 }

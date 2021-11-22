@@ -1,262 +1,80 @@
-// server.js
-// where your node app starts
+<!DOCTYPE html>
 
-// init project
-var validator = require('validator');
-var express = require('express');
-var app = express();
-var bodyParser = require('body-parser');
-// enable CORS (https://en.wikipedia.org/wiki/Cross-origin_resource_sharing)
-// so that your API is remotely testable by FCC 
-var cors = require('cors');
-var corsOptions = {
-  origin: 'https://boilerplate-project-urlshortener-1.gitsumakwel.repl.co',
-  methods: 'POST,GET',
-  optionsSuccessStatus: 301 // some legacy browsers (IE11, various SmartTVs) choke on 204
-}
+<html>
+  <head>
+    <title>URL Shortener Microservice | freeCodeCamp.org</title>
+    <link
+      rel="icon"
+      type="image/png"
+      href="https://cdn.freecodecamp.org/universal/favicons/favicon-16x16.png"
+    />
+    <link href="/public/style.css" rel="stylesheet" type="text/css" />
+    <!-- CSS only -->
+    <!-- CSS only -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+  </head>
 
-const dns = require('dns');
+  <body>
+    <h1>URL Shortener Microservice</h1>
+    <main>
+      <section>
+        <form id="shorturl" action="api/shorturl" method="POST">
+          <fieldset>
+            <legend>URL Shortener</legend>
+            <label for="url_input">URL:</label>
+            <input id="url_input" type="text" name="url" placeholder="https://www.freecodecamp.org/" />
+            <input type="submit" value="POST URL" />
+          </fieldset>
+        </form>
+        <h3>Example</h3>
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th scope="col">Type</th>
+              <th scope="col">Input/Result</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">URL</th>
+              <td>https://www.freecodecamp.org</td>
+            </tr>
+            <tr>
+              <th scope="row">jSON</th>
+              <td>{ "original_url":"https://www.freecodecamp.org","short_url":3343 }</td>
+            </tr>
+          </tbody>
+        </table>
+         <table class="table table-hover">
+          <thead>
+            <tr>
+              <th scope="col">Type</th>
+              <th scope="col">Input/Result</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">URL</th>
+              <td><a href="https://boilerplate-project-urlshortener-1.gitsumakwel.repl.co/api/shorturl/3343" target="_blank">[page url]/api/shorturl/3343</a></td>
+            </tr>
+            <tr>
+              <th scope="row">Webpage</th>
+              <td>https://www.freecodecamp.org</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+      <script>
+          const path = window.location.pathname.toString();
+          console.log(path);
+          if (path === '/') document.getElementById('shorturl').action = 'api/shorturl';
+          else document.getElementById('shorturl').action = '../api/shorturl';
 
-//log all request
-//request object, response object, next function
-const posthandler = (req,res,next) => {
-    //log the request
-    console.log(`${req.method} ${req.path} - ${req.ip}`);
-    // you need to declare, coz your server will get stuck
-    next();
-}
-
-//11-19/2021
-
-const done = (error,result) => {  
-    console.log(result);  
-}
-//set up database
-const { connector } = require('./src/database');
-const { ShortenURL,createAndSaveShortenURL,findShortenURL,getAll,deleteAll } = require('./src/model/shortenurl');
-//createAndSaveShortenURL({originalurl:'https://www.google.com',shortenurl:'abc1'},done)
-
-
-//choose your random key generator:)
-const { shortid,translator } = require('./src/shortuuid');
-const { randomkey } = require('./src/randomkey'); //randomkey(length);
-
-
-//import Swagger API Documentation
-const swaggerJsDoc = require("swagger-jsdoc");
-const swaggerUi = require("swagger-ui-express");
-
-// Extended: https://swagger.io/specification/#infoObject
-const swaggerOptions = {
-  swaggerDefinition: {
-    info: {
-      version: "1.0.0",
-      title: "URL Shortener",
-      description: "FCC Backend Project - URL Shortener Microservice",
-      contact: {
-        name: "Brill Jasper Amisola Rayel"
-      },
-    }
-  },
-  // ['.routes/*.js']
-  apis: ["server.js"]
-};
-
-
-const swaggerDocs = swaggerJsDoc(swaggerOptions);
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
-
-//app.use - only for GET request
-//use to include static assets needed by your application (stylesheets, scripts, images)
-app.use('/public',express.static(__dirname + '/public'));
-// will be called for any request
-// use for loging request
-app.use(posthandler); 
-// use for 'POST' request
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
-
-app.use(cors({optionsSuccessStatus: 200}));  // some legacy browsers choke on 204
-app.use(cors({optionsSuccessStatus: 301}));
-app.use(cors({optionsSuccessStatus: 302}));
-
-// http://expressjs.com/en/starter/static-files.html
-app.use(express.static('public'));
-
-//see if shorturl exists
-//recursion if exists
-//save to database for non exists and respond with json
-//ShortenURL.findOne({shorturl:'30DR11UC'}).exec().then((result)=>console.log(result)); 
-const recursion = (req,res) => {
-  //get url from post  
-  const len = Math.floor(Math.random() * 8) + 3;
-  let shorturl = randomkey(len).join('');   
-  let x = findShortenURL(shorturl,done);
-  
-  x.then( (result) => {  
-    if (result !== null) {
-        console.log('exists, retry shorturl...');
-        recursion(req,res);
-        x = findShortenURL(shorturl,done);
-    }
-    else {      
-      console.log('no duplicate, shorturl created!');
-      //save to database here.
-      createAndSaveShortenURL({originalurl:req.body.url,shorturl:shorturl},done)
-      res.json({ original_url : `${req.body.url}`, short_url : Number.parseInt(shorturl) });
-    }
-  });
-}
-
-class Future extends Object{
-  constructor(){
-    super();
-    this.result = null;
-  }
-}
-
-const checkConnection = async (host, future) => {  
-  return await dns.lookup(host, function (err, address, family) {
-				if (err) {
-					future.result = {returnValue: false};
-				} else {
-					future.result = {returnValue: true, ip: address, family: family};
-				}        
-			})
-
-}
-
-//API - /api/shorturl
-const postShortURL = (req,res,next) => {
-    //process valid url
-    let future = new Future();
-    if (validator.isURL(req.body.url)) {
-      //check if URL is working 
-      //1.strip https to confirm dns
-      //1.1 check if there is http or https
-      let stripped = req.body.url;
-      if (/https/.test(req.body.url)){
-        //stripped = req.body.url.match(/((?<=http:\/\/)|(?<=https:\/\/)).*/g)[0];
-        stripped = req.body.url.match(/(?<=https:\/\/).*/g)[0];
-
-        //2.get info of the stripped url
-        checkConnection(stripped,future).then(        
-          (resolve)=>{          
-            recursion(req,res);     
-          }
-        );
-      } else {
-        console.log("invalid url...", req.body.url);
-        res.json({ error: 'invalid url' });
-      }      
-    } else {
-      console.log("invalid url...", req.body.url);
-      res.json({ error: 'invalid url' });
-    }
-    
-}
-
-//API - /api/shorturl/{short_url}
-const getVisitURL = (req,res,next) => {
-  const url = req.params.short_url;  
-  if (validator.matches(url,/[\w\\+-\\*_\\.@$^=]{3,8}/)) {
-    //check in database shorturl
-    //extract original
-    let x = findShortenURL(url,done);
-    x.then((result)=>{      
-      let complete = result.originalurl;
-      console.log('-----------------------------------');
-      if (!(/https:\/\//.test(result.originalurl))){
-        complete = 'https://'+complete;
-      }
-      console.log(complete);
-      console.log('-----------------------------------');
-      //2.get info of the stripped url      
-      //301 permanent URL change
-      //302 temporary change 
-      //307 temporary change POST
-      //res.set({Origin: '*'});
-      res.redirect(301,complete);          
-    });
-
-  } else {
-    console.log("invalid short url", url)
-    re.json({ error: 'invalid url' });
-  }
-}
-
-
-
-// http://expressjs.com/en/starter/basic-routing.html
-app.get("/", function (req, res) {
-  res.sendFile(__dirname + '/views/index.html');
-});
-
-
-// your first API endpoint... 
-app.get("/api/hello", function (req, res) {
-  res.json({greeting: 'hello API'});
-});
-
-
-/**
-* @swagger
-*  /api/shorturl:
-*  post:
-*      description: Shorten a url
-*      consumes:
-*          - application/json
-*          - application/x-www-form-urlencoded
-*      parameters:
-*        - in: body
-*          name: url
-*          description: url to shorten
-*          schema:
-*              type: object
-*              required:
-*                 - url
-*              properties:
-*                 url:
-*                   type: string
-*      responses:
-*          200:
-*              description: URL
-*/
-app.route('/api/shorturl').post(postShortURL).get(function (req, res) {
-  res.sendFile(__dirname + '/views/index.html');
-});
-/**
-* @swagger
-*  /api/shorturl/{short_url}:
-*    get:
-*      description: translate shortened URL into original URL
-*      parameters:
-*        - in: path
-*          name: short_url
-*          required: false
-*          description: shortened url
-*          produces: text/html; charset=utf-8
-*          schema:
-*            type: string
-*      responses:
-*        '301':
-*          description: Auto generated using Swagger Inspector
-*          content: 
-*            text/html; charset=utf-8:
-*            schema: 
-*               type: string
-*      servers:
-*        - url: https://boilerplate-project-urlshortener.gitsumakwel.repl.co
-*    servers:
-*      - url: https://boilerplate-project-urlshortener.gitsumakwel.repl.co
-*/
-//applied cors(corsOptions) because the global cors for success is 200 using 
-//app.use(cors({optionsSuccessStatus: 200}))
-//while we use 301 for redirection in route: /api/shorturl/
-app.route('/api/shorturl/:short_url?').get(getVisitURL);
-
-// listen for requests :)
-var listener = app.listen(process.env.PORT, function () {
-  console.log('Your app is listening on port ' + listener.address().port);
-});
-
+      </script>
+    </main>
+    <footer>
+      <p>by <a href="https://www.freecodecamp.org/fcc8364894f-a1fb-48d0-b196-69fac43ef89d">Brill Jasper Amisola Rayel</a></p>
+      <p>Template by <a href="https://www.freecodecamp.org/">freeCodeCamp</a></p>
+    </footer>
+  </body>
+</html>
