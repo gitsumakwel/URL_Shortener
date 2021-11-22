@@ -4,12 +4,12 @@ const shortid = () => {
   return translator.new();
 };
 //translate to short
-const fromUUID =(uuid)=> {
+const fromUUID = (uuid) => {
   return translator.fromUUID(uuid);
 }
 
 //translate to uuid
-const toUUID =(shortid)=> {
+const toUUID = (shortid) => {
   return translator.toUUID(shortid);
 }
 
